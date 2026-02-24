@@ -135,67 +135,7 @@ curl "https://example.com/wp-json/vmfo/v1/folders" \
 
 ## Hooks & Filters
 
-### Actions
-
-| Hook | Description |
-|------|-------------|
-| `vmfo_folder_assigned` | Fired when media is assigned to a folder (params: `$media_id`, `$folder_id`, `$result`) |
-| `vmfo_settings_enqueue_scripts` | Fired when settings page scripts are enqueued (params: `$active_tab`, `$active_subtab`) |
-
-### Settings Filters
-
-#### `vmfo_default_settings`
-
-Filter the default settings values.
-
-```php
-add_filter( 'vmfo_default_settings', function( $defaults ) {
-    $defaults['show_all_media'] = true;
-    $defaults['show_uncategorized'] = true;
-    $defaults['jump_to_folder_after_move'] = false;
-    $defaults['default_folder'] = 0;
-    return $defaults;
-} );
-```
-
-#### `vmfo_settings`
-
-Filter all settings after loading from the database.
-
-```php
-add_filter( 'vmfo_settings', function( $options ) {
-    // Force jump to folder after move for all users
-    $options['jump_to_folder_after_move'] = true;
-    return $options;
-} );
-```
-
-#### `vmfo_setting_{$key}`
-
-Filter a specific setting value. Available keys:
-- `show_all_media`
-- `show_uncategorized`
-- `jump_to_folder_after_move`
-- `default_folder`
-
-```php
-// Hide "All Media" option for non-administrators
-add_filter( 'vmfo_setting_show_all_media', function( $value, $key, $options ) {
-    if ( ! current_user_can( 'manage_options' ) ) {
-        return false;
-    }
-    return $value;
-}, 10, 3 );
-```
-
-> **Note:** At least one of `show_all_media` or `show_uncategorized` must be `true`. If both are set to `false`, `show_all_media` will automatically be enabled.
-
-### Other Filters
-
-| Filter | Description |
-|--------|-------------|
-| `vmfo_settings_tabs` | Register add-on tabs on the settings page |
-| `vmfo_include_child_folders` | Include child folders when filtering by a folder (default: `false`) |
+See [hooks.md](hooks.md) for the complete hooks reference, including all core hooks and add-on hooks with examples.
 
 ## Preconfiguring Folders
 
