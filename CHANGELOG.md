@@ -5,6 +5,13 @@ All notable changes to Virtual Media Folders will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-03-10
+
+### Added
+
+- WordPress 7.0+ UI compatibility layer (`vmfo_is_wp7()` helper function)
+- Conditional WP 7+ style overrides for admin sidebar and editor modal
+
 ## [1.8.3] - 2026-03-07
 
 ### Security

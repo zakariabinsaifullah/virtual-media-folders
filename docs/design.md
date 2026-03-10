@@ -88,7 +88,14 @@ This document tracks the evolving design of the Media Manager plugin.
 
 ## In Progress
 
-- None.
+- **WordPress 7.0+ UI/UX Compatibility**:
+  - WP 7 ships a visual reskin ("coat-of-paint") with the Modern color scheme as default (`#3858e9` theme color). New design tokens for grays, radii, button heights, and elevation.
+  - **Approach**: Separate `wp7-compat.css` override files (admin + editor), conditionally loaded via `vmfo_is_wp7()` helper when WP ≥ 7.0.
+  - **Theme color**: All hardcoded `#007cba` / `#2271b1` replaced with `var(--wp-admin-theme-color)` and related custom properties so the plugin respects any admin color scheme.
+  - **Design tokens aligned**: sidebar bg `#f6f7f7` → `#f0f0f0`, borders `#dcdcde` → `#ddd`, modal `border-radius: 8px`.
+  - **Dependencies**: WP7 stylesheets declare `wp-base-styles` as a CSS dependency to guarantee custom properties are available.
+  - **Critical CSS**: `add_critical_css()` also emits WP 7 sidebar overrides to prevent layout shift.
+  - **Backward compatible**: Base stylesheets remain untouched; WP 6.x sees no change.
 
 ## Next
 
