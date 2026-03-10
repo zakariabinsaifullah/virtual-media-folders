@@ -19,6 +19,7 @@ This comprehensive guide covers everything you need to know to build add-on plug
 - [Testing](#testing)
 - [Constants Reference](#constants-reference)
 - [Best Practices](#best-practices)
+- [WordPress 7.0+ Compatibility](#wordpress-70-compatibility)
 - [Resources](#resources)
 
 ## Philosophy & Architecture
@@ -1270,6 +1271,81 @@ Before releasing your add-on, verify:
 - [ ] Assets are properly enqueued only on your tab
 - [ ] No console errors or warnings
 - [ ] Fallback works if parent plugin not available
+
+## WordPress 7.0+ Compatibility
+
+WordPress 7.0 ships a visual "coat-of-paint" reskin with a new default color scheme ("Modern"), updated buttons/inputs, and design tokens. Virtual Media Folders loads WP 7‑specific CSS overrides automatically, but add-ons that define their own styles should follow these guidelines to stay aligned.
+
+### Use CSS Custom Properties for Theme Colors
+
+WP 7 registers admin color-scheme values as CSS custom properties via the `wp-base-styles` handle. **Never hardcode the old WP 6.x blue (`#007cba` / `#2271b1`)** — use the variables so your add-on respects any admin color scheme:
+
+```css
+/* ✅ Works on both WP 6.x (falls back to initial) and 7.0+ */
+.my-addon-selected {
+  background: var(--wp-admin-theme-color, #007cba);
+  color: #fff;
+}
+
+.my-addon-focus:focus-visible {
+  outline: 2px solid var(--wp-admin-theme-color, #007cba);
+  box-shadow: 0 0 0 4px rgba(var(--wp-admin-theme-color--rgb, 0 124 186), 0.2);
+}
+```
+
+Available properties (set by `wp-base-styles` on WP 7+):
+
+| Property | Description |
+|---|---|
+| `--wp-admin-theme-color` | Primary theme color |
+| `--wp-admin-theme-color--rgb` | Same as above, space-separated RGB for use in `rgba()` |
+| `--wp-admin-theme-color-darker-10` | 10 % darker variant |
+| `--wp-admin-theme-color-darker-20` | 20 % darker variant |
+
+### Depend on `wp-base-styles`
+
+If your add-on enqueues a separate stylesheet that uses theme-color custom properties, list `wp-base-styles` as a dependency so the variables are guaranteed to exist:
+
+```php
+wp_enqueue_style(
+    'my-addon-styles',
+    MY_ADDON_URL . 'build/my-addon.css',
+    [ 'vmfo-admin', 'wp-base-styles' ],
+    MY_ADDON_VERSION
+);
+```
+
+On WP 6.x the `wp-base-styles` handle doesn't exist, so WordPress silently skips it — your stylesheet still loads.
+
+### Detect WP 7 in PHP
+
+The parent plugin exposes a helper you can call:
+
+```php
+if ( function_exists( 'vmfo_is_wp7' ) && vmfo_is_wp7() ) {
+    // Load WP 7‑only overrides.
+}
+```
+
+### WP 7 Design Token Reference
+
+Key values from WP 7's `_tokens.scss` that affect admin surfaces:
+
+| Token | Value | Use |
+|---|---|---|
+| `$gray-100` | `#f0f0f0` | Panel / sidebar backgrounds |
+| `$gray-300` | `#dddddd` | Borders, dividers |
+| `$radius-s` | `2px` | Input / button border-radius |
+| `$radius-m` | `4px` | Small cards |
+| `$radius-l` | `8px` | Modals, large cards |
+| `$button-height-default` | `40px` | Standard button height |
+| `$button-height-compact` | `32px` | Compact button height |
+
+### Testing Across WP Versions
+
+1. **WP 6.x** – Confirm the base styles load and no WP 7 overrides are applied.
+2. **WP 7.0+** – Switch between admin color schemes (Modern, Fresh, etc.) and verify theme-color variables resolve correctly.
+3. **High contrast / forced-colors** – Ensure forced-colors overrides still work.
 
 ## Resources
 

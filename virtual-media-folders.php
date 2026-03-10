@@ -14,7 +14,7 @@
  * @wordpress-plugin
  * Plugin Name: Virtual Media Folders
  * Description: Virtual folder organization and smart management for the WordPress Media Library.
- * Version: 1.8.3
+ * Version: 1.9.0
  * Requires at least: 6.8
  * Requires PHP: 8.3
  * Author: Per Soderlind
@@ -55,7 +55,7 @@ if ( version_compare( get_bloginfo( 'version' ), '6.8', '<' ) ) {
 /*
  * Define plugin constants.
  */
-define( 'VMFO_VERSION', '1.8.3' );
+define( 'VMFO_VERSION', '1.9.0' );
 define( 'VMFO_FILE', __FILE__ );
 define( 'VMFO_PATH', __DIR__ . '/' );
 define( 'VMFO_URL', plugin_dir_url( __FILE__ ) );
@@ -107,6 +107,20 @@ function vmfo_is_sidebar_visible(): bool {
 	}
 
 	return $value === '1';
+}
+
+/**
+ * Check if the current WordPress version is 7.0 or later.
+ *
+ * Used to conditionally load WP 7-specific style overrides that align
+ * with the new "Modern" admin color scheme and design tokens.
+ *
+ * @since 1.9.0
+ *
+ * @return bool True when running on WordPress 7.0+.
+ */
+function vmfo_is_wp7(): bool {
+	return version_compare( get_bloginfo( 'version' ), '7.0', '>=' );
 }
 
 /**

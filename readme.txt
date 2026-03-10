@@ -3,7 +3,7 @@ Contributors: PerS
 Tags: media, ai, organization, media library, folders
 Requires at least: 6.8
 Tested up to: 7.0
-Stable tag: 1.8.3
+Stable tag: 1.9.0
 Requires PHP: 8.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -129,6 +129,10 @@ Only the folder organization is removed. Your media files are not deleted.
 Virtual Media Folders works entirely within the WordPress admin. It doesn't affect your front-end theme.
 
 == Changelog ==
+
+= 1.9.0 =
+* Added: WordPress 7.0+ UI compatibility layer (`vmfo_is_wp7()` helper function)
+* Added: Conditional WP 7+ style overrides for admin sidebar and editor modal
 
 = 1.8.3 =
 * Security: Updated npm and Composer dependencies to address dependabot alerts
