@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build plugin
-        run: composer install --no-dev
+        run: composer install --no-dev --optimize-autoloader
 
       - name: Archive Release
         uses: thedoctor0/zip-release@b57d897cb5d60cb78b51a507f63fa184cfe35554 #0.7.6
