@@ -1,0 +1,79 @@
+/**
+ * WP 7.0+ shared admin compatibility base for VMF add-ons.
+ *
+ * Common design-token overrides applied to all add-on UIs.
+ * Each add-on layers plugin-specific selectors on top of this base.
+ *
+ * @since   2.0.0
+ * @package VirtualMediaFolders
+ */
+
+/* ==========================================================================
+   Theme color: CSS custom properties from wp-base-styles
+   ========================================================================== */
+
+/* Links inside add-on panels */
+.vmfa-tab-content a {
+	color: var(--wp-admin-theme-color);
+}
+
+.vmfa-tab-content a:hover,
+.vmfa-tab-content a:focus {
+	color: var(--wp-admin-theme-color-darker-20);
+}
+
+/* Generic progress bar fill */
+[class*="vmfa-"][class*="__progress-fill"],
+[class*="vmfa-"][class*="__bar"] {
+	background: var(--wp-admin-theme-color);
+}
+
+/* Focus ring for interactive elements */
+.vmfa-tab-content button:focus,
+.vmfa-tab-content input:focus,
+.vmfa-tab-content select:focus {
+	border-color: var(--wp-admin-theme-color);
+	box-shadow: 0 0 0 1px var(--wp-admin-theme-color);
+}
+
+/* Badge / status with theme-aligned tones */
+[class*="vmfa-"][class*="--processing"],
+[class*="vmfa-"][class*="--pending"] {
+	background: rgba(var(--wp-admin-theme-color--rgb), 0.1);
+	color: var(--wp-admin-theme-color);
+}
+
+/* Stats highlight value */
+.vmfa-stats-value--highlight {
+	color: var(--wp-admin-theme-color);
+}
+
+/* ==========================================================================
+   Design-token alignment: backgrounds & borders
+   ========================================================================== */
+
+/* Neutral surface — section headers, hover states, thumbnails */
+[class*="vmfa-"][class*="__header"],
+[class*="vmfa-"][class*="-summary"] {
+	background: #f0f0f0;
+}
+
+/* Consistent border color */
+[class*="vmfa-"][class*="__card"],
+[class*="vmfa-"][class*="-panel"],
+[class*="vmfa-"][class*="-group"],
+.vmfa-tab-content table th,
+.vmfa-tab-content table td {
+	border-color: #ddd;
+}
+
+/* Progress bar track */
+[class*="vmfa-"][class*="__progress-bar"],
+[class*="vmfa-"][class*="__bar-wrapper"] {
+	background: #f0f0f0;
+}
+
+/* Stat card borders */
+[class*="vmfa-"][class*="__stat-card"] {
+	border-color: #ddd;
+}
