@@ -7,9 +7,11 @@ This comprehensive guide covers everything you need to know to build add-on plug
 - [Philosophy & Architecture](#philosophy--architecture)
 - [Overview](#overview)
 - [Prerequisites](#prerequisites)
+- [Base Classes](#base-classes)
 - [Plugin Structure](#plugin-structure)
 - [Bootstrap File](#bootstrap-file)
 - [Settings Tab Integration](#settings-tab-integration)
+- [Action Scheduler](#action-scheduler)
 - [Working with Folders](#working-with-folders)
 - [REST API](#rest-api)
 - [Hooks & Filters](#hooks--filters)
@@ -19,7 +21,6 @@ This comprehensive guide covers everything you need to know to build add-on plug
 - [Testing](#testing)
 - [Constants Reference](#constants-reference)
 - [Best Practices](#best-practices)
-- [WordPress 7.0+ Compatibility](#wordpress-70-compatibility)
 - [Resources](#resources)
 
 ## Philosophy & Architecture
@@ -71,16 +72,17 @@ Virtual Media Folders is designed to be extensible. Add-ons can:
 
 ## Existing Add-ons
 
-Four official add-ons are available as reference implementations:
+Five official add-ons are available as reference implementations:
 
 - **[AI Organizer](https://github.com/soderlind/vmfa-ai-organizer)** – Uses AI vision models to automatically suggest folders for images
 - **[Editorial Workflow](https://github.com/soderlind/vmfa-editorial-workflow)** – Role-based folder access, move restrictions, and Inbox workflow
+- **[Folder Exporter](https://github.com/soderlind/vmfa-folder-exporter)** – Export folders as ZIP archives with optional CSV manifests
 - **[Media Cleanup](https://github.com/soderlind/vmfa-media-cleanup)** – Tools to identify and clean up unused or duplicate media files
 - **[Rules Engine](https://github.com/soderlind/vmfa-rules-engine)** – Rule-based automatic folder assignment based on metadata
 
 ## Prerequisites
 
-- Virtual Media Folders 1.6.0 or later
+- Virtual Media Folders 2.0.0 or later (for base classes; 1.6.0 minimum for raw hook integration)
 - PHP 8.3 or later
 - WordPress 6.8 or later
 
@@ -93,8 +95,9 @@ my-vmfa-addon/
 ├── build/                    # Compiled assets
 ├── src/
 │   ├── php/                  # PHP classes
-│   │   ├── Plugin.php        # Main plugin class
-│   │   ├── Admin.php         # Admin integration
+│   │   ├── Plugin.php        # Main plugin class (extends AbstractPlugin)
+│   │   ├── Admin/
+│   │   │   └── SettingsTab.php  # Settings tab (extends AbstractSettingsTab)
 │   │   └── REST/             # REST API controllers
 │   ├── js/                   # React components
 │   │   ├── index.js          # Entry point
@@ -103,8 +106,8 @@ my-vmfa-addon/
 │   │   │   ├── SettingsPanel.jsx
 │   │   │   └── StatsCard.jsx
 │   │   └── components/       # Shared React components
-│   └── css/                  # Stylesheets
-│       └── settings.css
+│   └── styles/               # Stylesheets
+│       └── settings.scss
 ├── languages/                # Translation files
 ├── my-vmfa-addon.php         # Plugin bootstrap
 ├── package.json
@@ -112,7 +115,228 @@ my-vmfa-addon/
 └── webpack.config.js
 ```
 
+## Base Classes
+
+VMF core provides three base classes in the `VirtualMediaFolders\Addon` namespace that eliminate boilerplate from add-on plugins. All official add-ons use these base classes.
+
+### AbstractPlugin
+
+`VirtualMediaFolders\Addon\AbstractPlugin` — Singleton lifecycle, text domain loading, and parent-tab detection.
+
+**Abstract methods (required):**
+
+| Method | Return | Purpose |
+|--------|--------|---------|
+| `get_text_domain()` | `string` | Plugin text domain, e.g. `'vmfa-rules-engine'` |
+| `get_plugin_file()` | `string` | Absolute path to the main `.php` file (typically a constant like `VMFA_RULES_ENGINE_FILE`) |
+
+**Template methods (override as needed):**
+
+| Method | Default | Purpose |
+|--------|---------|---------|
+| `init_services()` | no-op | Create service objects and the SettingsTab instance |
+| `init_hooks()` | no-op | Register WordPress hooks (admin, REST, filters) |
+| `init_cli()` | no-op | Register WP-CLI commands |
+
+**Inherited concrete methods:**
+
+| Method | Purpose |
+|--------|---------|
+| `get_instance(): static` | Per-subclass singleton accessor |
+| `init(): void` | Boot sequence — calls `init_services()`, `init_hooks()`, `init_cli()`, schedules `load_textdomain` |
+| `load_textdomain(): void` | Loads `languages/{text-domain}-{locale}.mo` |
+| `supports_parent_tabs(): bool` | Checks `VirtualMediaFolders\Settings::SUPPORTS_ADDON_TABS` |
+
+**Minimal example:**
+
+```php
+<?php
+declare(strict_types=1);
+
+namespace MyVmfaAddon;
+
+use VirtualMediaFolders\Addon\AbstractPlugin;
+
+final class Plugin extends AbstractPlugin {
+
+    protected function get_text_domain(): string {
+        return 'my-vmfa-addon';
+    }
+
+    protected function get_plugin_file(): string {
+        return MY_VMFA_ADDON_FILE;
+    }
+
+    protected function init_services(): void {
+        // Create your service objects here.
+    }
+
+    protected function init_hooks(): void {
+        // Register WordPress hooks here.
+    }
+}
+```
+
+### AbstractSettingsTab
+
+`VirtualMediaFolders\Addon\AbstractSettingsTab` — Tab registration, asset enqueue (JS + CSS + WP 7 compat), `wp_localize_script`, fallback standalone menu, and default React mount-point.
+
+**Abstract methods (required):**
+
+| Method | Return | Purpose |
+|--------|--------|---------|
+| `get_tab_slug()` | `string` | Tab slug, e.g. `'rules-engine'` |
+| `get_tab_label()` | `string` | Translated tab label |
+| `get_text_domain()` | `string` | Plugin text domain |
+| `get_build_path()` | `string` | Absolute path to `build/` (trailing slash) |
+| `get_build_url()` | `string` | URL to `build/` (trailing slash) |
+| `get_languages_path()` | `string` | Absolute path to `languages/` directory |
+| `get_plugin_version()` | `string` | Plugin version (fallback for asset versioning) |
+| `get_localized_data()` | `array` | Data for `wp_localize_script` |
+| `get_localized_name()` | `string` | JS global variable name for localized data |
+
+**Optional overrides:**
+
+| Method | Default | Purpose |
+|--------|---------|---------|
+| `get_asset_entry()` | `'index'` | Build entry-point basename (e.g. `'settings'`) |
+| `get_style_deps()` | `['wp-components']` | CSS dependencies |
+| `get_tab_definition()` | `{title, callback}` | Override to add `'subtabs'` |
+| `get_menu_capability()` | `'manage_options'` | Capability for fallback menu |
+| `get_app_container_id()` | `'vmfa-{slug}-app'` | React mount-point div id |
+
+**Public API (called by Plugin's `init_hooks()`):**
+
+| Method | Used as |
+|--------|---------|
+| `register_tab( $tabs )` | `vmfo_settings_tabs` filter callback |
+| `enqueue_tab_scripts( $tab, $subtab )` | `vmfo_settings_enqueue_scripts` action callback |
+| `render_tab( $tab, $subtab )` | Tab render callback |
+| `register_admin_menu()` | `admin_menu` action callback (fallback) |
+| `enqueue_admin_assets( $hook )` | `admin_enqueue_scripts` action callback (fallback) |
+| `render_admin_page()` | Fallback standalone page render |
+
+The base class handles:
+- Loading `build/{entry}.asset.php` for dependency/version info
+- Enqueuing JS, CSS, and script translations
+- WP 7+ design-token compat CSS (shared `wp7-compat-base.css` from VMF core + plugin-specific `build/wp7-compat.css`)
+- Fallback standalone admin menu under Media when the parent plugin doesn't support tabs
+
+**Minimal example:**
+
+```php
+<?php
+declare(strict_types=1);
+
+namespace MyVmfaAddon\Admin;
+
+use VirtualMediaFolders\Addon\AbstractSettingsTab;
+
+class SettingsTab extends AbstractSettingsTab {
+
+    protected function get_tab_slug(): string {
+        return 'my-addon';
+    }
+
+    protected function get_tab_label(): string {
+        return __( 'My Add-on', 'my-vmfa-addon' );
+    }
+
+    protected function get_text_domain(): string {
+        return 'my-vmfa-addon';
+    }
+
+    protected function get_build_path(): string {
+        return MY_VMFA_ADDON_PATH . 'build/';
+    }
+
+    protected function get_build_url(): string {
+        return MY_VMFA_ADDON_URL . 'build/';
+    }
+
+    protected function get_languages_path(): string {
+        return MY_VMFA_ADDON_PATH . 'languages';
+    }
+
+    protected function get_plugin_version(): string {
+        return MY_VMFA_ADDON_VERSION;
+    }
+
+    protected function get_localized_name(): string {
+        return 'myVmfaAddon';
+    }
+
+    protected function get_localized_data(): array {
+        return [
+            'restUrl' => rest_url( 'my-addon/v1/' ),
+            'nonce'   => wp_create_nonce( 'wp_rest' ),
+            'folders' => $this->get_folders(), // your method
+        ];
+    }
+}
+```
+
+**With subtabs:**
+
+```php
+protected function get_tab_definition(): array {
+    return [
+        'title'    => $this->get_tab_label(),
+        'callback' => [ $this, 'render_tab' ],
+        'subtabs'  => [
+            'scan'     => __( 'Scan', 'my-vmfa-addon' ),
+            'results'  => __( 'Results', 'my-vmfa-addon' ),
+            'settings' => __( 'Settings', 'my-vmfa-addon' ),
+        ],
+    ];
+}
+```
+
+### ActionSchedulerLoader
+
+`VirtualMediaFolders\Addon\ActionSchedulerLoader` — Static helper to load Action Scheduler from an add-on's vendor directory.
+
+```php
+use VirtualMediaFolders\Addon\ActionSchedulerLoader;
+
+// In the main plugin file, before plugins_loaded:
+ActionSchedulerLoader::maybe_load( MY_VMFA_ADDON_PATH );
+```
+
+`maybe_load( string $plugin_dir ): bool` probes two paths:
+
+1. `{$plugin_dir}vendor/woocommerce/action-scheduler/action-scheduler.php`
+2. `{$plugin_dir}woocommerce/action-scheduler/action-scheduler.php`
+
+Returns `true` if `as_schedule_single_action` is available (already loaded or just loaded). Safe to call from multiple add-ons — Action Scheduler's internal version registry (`ActionScheduler_Versions`) ensures only the highest version boots.
+
+### Wiring It All Together
+
+In your Plugin class, create the SettingsTab in `init_services()` and wire the hooks in `init_hooks()`:
+
+```php
+protected function init_services(): void {
+    $this->settings_tab = new Admin\SettingsTab();
+}
+
+protected function init_hooks(): void {
+    if ( is_admin() ) {
+        if ( $this->supports_parent_tabs() ) {
+            add_filter( 'vmfo_settings_tabs', [ $this->settings_tab, 'register_tab' ] );
+            add_action( 'vmfo_settings_enqueue_scripts', [ $this->settings_tab, 'enqueue_tab_scripts' ], 10, 2 );
+        } else {
+            add_action( 'admin_menu', [ $this->settings_tab, 'register_admin_menu' ] );
+            add_action( 'admin_enqueue_scripts', [ $this->settings_tab, 'enqueue_admin_assets' ] );
+        }
+    }
+
+    add_action( 'rest_api_init', [ $this, 'register_rest_routes' ] );
+}
+```
+
 ## Bootstrap File
+
+The main plugin file defines constants, loads the autoloader, optionally loads Action Scheduler, and boots the Plugin singleton:
 
 ```php
 <?php
@@ -126,36 +350,78 @@ my-vmfa-addon/
  * Author: Your Name
  * License: GPL-2.0-or-later
  * Text Domain: my-vmfa-addon
+ * Domain Path: /languages
  */
 
 declare(strict_types=1);
 
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+namespace MyVmfaAddon;
+
+defined( 'ABSPATH' ) || exit;
+
+// Plugin constants.
+define( 'MY_VMFA_ADDON_VERSION', '1.0.0' );
+define( 'MY_VMFA_ADDON_FILE', __FILE__ );
+define( 'MY_VMFA_ADDON_PATH', plugin_dir_path( __FILE__ ) );
+define( 'MY_VMFA_ADDON_URL', plugin_dir_url( __FILE__ ) );
+
+// Composer autoload.
+if ( file_exists( MY_VMFA_ADDON_PATH . 'vendor/autoload.php' ) ) {
+    require_once MY_VMFA_ADDON_PATH . 'vendor/autoload.php';
 }
 
-// Fallback check for WordPress < 6.5 (which doesn't support Requires Plugins header).
-add_action( 'plugins_loaded', function() {
-    if ( ! defined( 'VMFO_VERSION' ) ) {
-        add_action( 'admin_notices', function() {
-            echo '<div class="notice notice-error"><p>';
-            esc_html_e( 'My VMFA Add-on requires Virtual Media Folders to be installed and activated.', 'my-vmfa-addon' );
-            echo '</p></div>';
-        });
-        return;
-    }
+// (Optional) Load Action Scheduler early — only if your add-on uses it.
+use VirtualMediaFolders\Addon\ActionSchedulerLoader;
+ActionSchedulerLoader::maybe_load( MY_VMFA_ADDON_PATH );
 
-    // Initialize your add-on.
-    require_once __DIR__ . '/src/php/Plugin.php';
-    \MyVmfaAddon\Plugin::get_instance();
-});
+/**
+ * Initialize the plugin.
+ */
+function init(): void {
+    Plugin::get_instance()->init();
+}
+add_action( 'plugins_loaded', __NAMESPACE__ . '\\init', 20 );
 ```
+
+> **Note:** The `Requires Plugins: virtual-media-folders` header (WordPress 6.5+) ensures VMF is loaded first. For older WordPress, add a fallback check for `defined( 'VMFO_VERSION' )` inside `init()`.
+
+### What AbstractPlugin gives you for free
+
+- **Singleton** — `Plugin::get_instance()` returns a per-subclass singleton; private constructor, `__clone`, `__wakeup` are handled.
+- **Text domain** — `load_textdomain()` is called on the `init` hook automatically.
+- **supports_parent_tabs()** — Checks the VMF parent constant; no need to duplicate this in every add-on.
 
 ## Settings Tab Integration
 
-Virtual Media Folders provides a tab-based settings page architecture that allows add-on plugins to register their own settings tabs within the parent plugin's "Folder Settings" page.
+VMF provides a tab-based settings page. Add-ons register their own tabs within the parent plugin's "Folder Settings" page.
 
-### Detecting Tab Support
+### Recommended: Use AbstractSettingsTab
+
+The simplest approach is to extend `AbstractSettingsTab` (see [Base Classes](#abstractsettingstab) above). The base class handles tab registration, asset enqueuing, WP 7 compat CSS, `wp_localize_script`, and the fallback standalone menu — all from a set of abstract getters.
+
+Your Plugin class wires the SettingsTab to the correct hooks:
+
+```php
+protected function init_hooks(): void {
+    if ( is_admin() ) {
+        if ( $this->supports_parent_tabs() ) {
+            add_filter( 'vmfo_settings_tabs', [ $this->settings_tab, 'register_tab' ] );
+            add_action( 'vmfo_settings_enqueue_scripts', [ $this->settings_tab, 'enqueue_tab_scripts' ], 10, 2 );
+        } else {
+            add_action( 'admin_menu', [ $this->settings_tab, 'register_admin_menu' ] );
+            add_action( 'admin_enqueue_scripts', [ $this->settings_tab, 'enqueue_admin_assets' ] );
+        }
+    }
+}
+```
+
+That's it — no inline `do_enqueue_assets()`, no WP 7 compat logic, no fallback menu boilerplate.
+
+### Manual approach (without base class)
+
+If you prefer not to use the base class, you can wire the hooks directly.
+
+#### Detecting Tab Support
 
 Check if the parent plugin supports the tab system:
 
@@ -320,9 +586,9 @@ add_action( 'vmfo_settings_enqueue_scripts', function( string $active_tab, strin
 }, 10, 2);
 ```
 
-### Backwards Compatibility
+### Backwards Compatibility (handled by AbstractSettingsTab)
 
-Support older versions or standalone operation:
+When using `AbstractSettingsTab`, backwards compatibility is built in. The Plugin class's `init_hooks()` already branches between tab mode and standalone fallback mode (see above). If you're wiring hooks manually, the same pattern applies:
 
 ```php
 public function init_admin(): void {
@@ -363,6 +629,24 @@ public function enqueue_standalone_scripts( string $hook_suffix ): void {
     // Enqueue your assets here.
 }
 ```
+
+## Action Scheduler
+
+If your add-on needs background processing (batch jobs, scheduled scans, etc.), use [Action Scheduler](https://actionscheduler.org/) via Composer:
+
+```bash
+composer require woocommerce/action-scheduler
+```
+
+Load it in your main plugin file **before** `plugins_loaded` using the shared helper:
+
+```php
+use VirtualMediaFolders\Addon\ActionSchedulerLoader;
+
+ActionSchedulerLoader::maybe_load( MY_VMFA_ADDON_PATH );
+```
+
+This is safe to call from multiple add-ons. Action Scheduler's internal `ActionScheduler_Versions` registry ensures only the highest version boots. See [ActionSchedulerLoader](#actionschedulerloader) for details.
 
 ## Working with Folders
 
@@ -1229,24 +1513,28 @@ describe('MyComponent', () => {
 
 ## Constants Reference
 
-| Constant | Type | Description |
-|----------|------|-------------|
+| Constant / Class | Type | Description |
+|------------------|------|-------------|
 | `VMFO_VERSION` | string | Parent plugin version |
 | `VMFO_PATH` | string | Parent plugin path |
 | `VMFO_URL` | string | Parent plugin URL |
 | `VirtualMediaFolders\Settings::SUPPORTS_ADDON_TABS` | bool | Tab system support |
 | `VirtualMediaFolders\Settings::PAGE_SLUG` | string | Settings page slug (`vmfo-settings`) |
+| `VirtualMediaFolders\Addon\AbstractPlugin` | class | Base class for add-on Plugin |
+| `VirtualMediaFolders\Addon\AbstractSettingsTab` | class | Base class for add-on SettingsTab |
+| `VirtualMediaFolders\Addon\ActionSchedulerLoader` | class | Action Scheduler loader helper |
 
 ## Best Practices
 
-1. **Declare dependency** – Use the `Requires Plugins: virtual-media-folders` header (WordPress 6.5+)
-2. **Check parent plugin** – Also verify `VMFO_VERSION` is defined for older WordPress versions
-3. **Use priorities** – Hook into upload filters with priority 20+ to run after VMFO
-4. **Namespace everything** – Use unique prefixes for options, meta keys, and hooks
-5. **Support fallbacks** – Work with or without the tab system
-6. **Follow WordPress standards** – Use WordPress Coding Standards and components
-7. **Test thoroughly** – Include both PHP and JavaScript tests
-8. **Internationalize** – Make all strings translatable
+1. **Use the base classes** — Extend `AbstractPlugin` and `AbstractSettingsTab` to eliminate boilerplate
+2. **Declare dependency** — Use the `Requires Plugins: virtual-media-folders` header (WordPress 6.5+)
+3. **Check parent plugin** — Also verify `VMFO_VERSION` is defined for older WordPress versions
+4. **Use priorities** — Hook into upload filters with priority 20+ to run after VMFO
+5. **Namespace everything** — Use unique prefixes for options, meta keys, and hooks
+6. **Support fallbacks** — Branch on `supports_parent_tabs()` for tab vs standalone menu
+7. **Follow WordPress standards** — Use WordPress Coding Standards and components
+8. **Test thoroughly** — Include both PHP and JavaScript tests
+9. **Internationalize** — Make all strings translatable
 
 ### UI/UX Checklist
 
@@ -1266,86 +1554,13 @@ Before releasing your add-on, verify:
 - [ ] Save/action buttons are clearly labeled
 
 **Code Quality:**
+- [ ] Plugin extends `AbstractPlugin`
+- [ ] SettingsTab extends `AbstractSettingsTab`
 - [ ] All text is translatable with `__()` or `_e()`
 - [ ] REST endpoints return proper error responses
 - [ ] Assets are properly enqueued only on your tab
 - [ ] No console errors or warnings
 - [ ] Fallback works if parent plugin not available
-
-## WordPress 7.0+ Compatibility
-
-WordPress 7.0 ships a visual "coat-of-paint" reskin with a new default color scheme ("Modern"), updated buttons/inputs, and design tokens. Virtual Media Folders loads WP 7‑specific CSS overrides automatically, but add-ons that define their own styles should follow these guidelines to stay aligned.
-
-### Use CSS Custom Properties for Theme Colors
-
-WP 7 registers admin color-scheme values as CSS custom properties via the `wp-base-styles` handle. **Never hardcode the old WP 6.x blue (`#007cba` / `#2271b1`)** — use the variables so your add-on respects any admin color scheme:
-
-```css
-/* ✅ Works on both WP 6.x (falls back to initial) and 7.0+ */
-.my-addon-selected {
-  background: var(--wp-admin-theme-color, #007cba);
-  color: #fff;
-}
-
-.my-addon-focus:focus-visible {
-  outline: 2px solid var(--wp-admin-theme-color, #007cba);
-  box-shadow: 0 0 0 4px rgba(var(--wp-admin-theme-color--rgb, 0 124 186), 0.2);
-}
-```
-
-Available properties (set by `wp-base-styles` on WP 7+):
-
-| Property | Description |
-|---|---|
-| `--wp-admin-theme-color` | Primary theme color |
-| `--wp-admin-theme-color--rgb` | Same as above, space-separated RGB for use in `rgba()` |
-| `--wp-admin-theme-color-darker-10` | 10 % darker variant |
-| `--wp-admin-theme-color-darker-20` | 20 % darker variant |
-
-### Depend on `wp-base-styles`
-
-If your add-on enqueues a separate stylesheet that uses theme-color custom properties, list `wp-base-styles` as a dependency so the variables are guaranteed to exist:
-
-```php
-wp_enqueue_style(
-    'my-addon-styles',
-    MY_ADDON_URL . 'build/my-addon.css',
-    [ 'vmfo-admin', 'wp-base-styles' ],
-    MY_ADDON_VERSION
-);
-```
-
-On WP 6.x the `wp-base-styles` handle doesn't exist, so WordPress silently skips it — your stylesheet still loads.
-
-### Detect WP 7 in PHP
-
-The parent plugin exposes a helper you can call:
-
-```php
-if ( function_exists( 'vmfo_is_wp7' ) && vmfo_is_wp7() ) {
-    // Load WP 7‑only overrides.
-}
-```
-
-### WP 7 Design Token Reference
-
-Key values from WP 7's `_tokens.scss` that affect admin surfaces:
-
-| Token | Value | Use |
-|---|---|---|
-| `$gray-100` | `#f0f0f0` | Panel / sidebar backgrounds |
-| `$gray-300` | `#dddddd` | Borders, dividers |
-| `$radius-s` | `2px` | Input / button border-radius |
-| `$radius-m` | `4px` | Small cards |
-| `$radius-l` | `8px` | Modals, large cards |
-| `$button-height-default` | `40px` | Standard button height |
-| `$button-height-compact` | `32px` | Compact button height |
-
-### Testing Across WP Versions
-
-1. **WP 6.x** – Confirm the base styles load and no WP 7 overrides are applied.
-2. **WP 7.0+** – Switch between admin color schemes (Modern, Fresh, etc.) and verify theme-color variables resolve correctly.
-3. **High contrast / forced-colors** – Ensure forced-colors overrides still work.
 
 ## Resources
 
@@ -1353,7 +1568,8 @@ Key values from WP 7's `_tokens.scss` that affect admin surfaces:
 - [Development Guide](development.md) – Parent plugin development setup
 - [REST API Documentation](development.md#rest-api) – API endpoints
 - [AI Organizer Source](https://github.com/soderlind/vmfa-ai-organizer) – Reference implementation
-- [Rules Engine Source](https://github.com/soderlind/vmfa-rules-engine) – Reference implementation
 - [Editorial Workflow Source](https://github.com/soderlind/vmfa-editorial-workflow) – Reference implementation
+- [Folder Exporter Source](https://github.com/soderlind/vmfa-folder-exporter) – Reference implementation
 - [Media Cleanup Source](https://github.com/soderlind/vmfa-media-cleanup) – Reference implementation
+- [Rules Engine Source](https://github.com/soderlind/vmfa-rules-engine) – Reference implementation
 - [Smart Folders Source](https://github.com/soderlind/vmfa-smart-folders) – Reference implementation
