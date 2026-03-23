@@ -125,7 +125,7 @@ curl -X POST "https://example.com/wp-json/mcp/mcp-adapter-default-server" \
 	-d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"mcp-adapter-execute-ability","arguments":{"ability_name":"vmfo/add-to-folder","parameters":{"folder_id":2285,"attachment_ids":[101,205,309]}}}}'
 ```
 
-Smoke test:
+[Smoke test](./scripts/mcp-adapter-smoke-test.sh):
 
 ```bash
 MCP_BASE_URL="https://example.com/wp-json/mcp/mcp-adapter-default-server" \
