@@ -181,7 +181,7 @@ Add an MCP HTTP server entry in Cursor MCP settings:
 
 A reusable skill file is available at:
 
-`.github/skills/add-photo-to-folder/SKILL.md`
+[`.github/skills/add-photo-to-folder/SKILL.md`](../.github/skills/add-photo-to-folder/SKILL.md)
 
 It defines a deterministic flow that:
 
