@@ -30,6 +30,7 @@ Use the [**add-on manager**](https://github.com/soderlind/vmfa) to install and m
 - [**Editorial Workflow**](https://github.com/soderlind/vmfa-editorial-workflow) – Role-based folder access, move restrictions, and Inbox workflow.
 - [**Folder Exporter**](https://github.com/soderlind/vmfa-folder-exporter) – Export folders (or subtrees) as ZIP archives with optional CSV manifests.
 - [**Media Cleanup**](https://github.com/soderlind/vmfa-media-cleanup) – Detect unused, duplicate, and oversized media — then archive, trash, or flag for review.
+- [**Migrate**](https://github.com/soderlind/vmfa-migrate) – Migrate folder structures from other media folder plugins to Virtual Media Folders.
 - [**Rules Engine**](https://github.com/soderlind/vmfa-rules-engine) – Rule-based automatic folder assignment for media uploads, based on metadata, file type, or other criteria.
 
 

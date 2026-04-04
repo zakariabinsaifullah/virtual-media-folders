@@ -32,6 +32,7 @@ Virtual Media Folders brings virtual folder organization to your WordPress Media
 * [**Editorial Workflow**](https://github.com/soderlind/vmfa-editorial-workflow) – Role-based folder access, move restrictions, and Inbox workflow.
 * [**Folder Exporter**](https://github.com/soderlind/vmfa-folder-exporter) – Export folders (or subtrees) as ZIP archives with optional CSV manifests.
 * [**Media Cleanup**](https://github.com/soderlind/vmfa-media-cleanup) – Tools to identify and clean up unused or duplicate media files.
+* [**Migrate**](https://github.com/soderlind/vmfa-migrate) – Migrate folder structures from other media folder plugins to Virtual Media Folders.
 * [**Rules Engine**](https://github.com/soderlind/vmfa-rules-engine) – Rule-based automatic folder assignment for media uploads, based on metadata, file type, or other criteria. 
 
 https://www.youtube.com/watch?v=bA4lf7ynz24
@@ -109,6 +110,7 @@ Use the [**add-on manager**](https://github.com/soderlind/vmfa) to easily instal
 * [Virtual Media Folders - Editorial Workflow](https://github.com/soderlind/vmfa-editorial-workflow) – Role-based folder access, move restrictions, and Inbox workflow.
 * [Virtual Media Folders - Folder Exporter](https://github.com/soderlind/vmfa-folder-exporter) – Export folders (or subtrees) as ZIP archives with optional CSV manifests.
 * [Virtual Media Folders - Media Cleanup](https://github.com/soderlind/vmfa-media-cleanup) – Tools to identify and clean up unused or duplicate media files.
+* [Virtual Media Folders - Migrate](https://github.com/soderlind/vmfa-migrate) – Migrate folder structures from other media folder plugins to Virtual Media Folders.
 * [Virtual Media Folders - Rules Engine](https://github.com/soderlind/vmfa-rules-engine) – Rule-based automatic folder assignment for media uploads, based on metadata, file type, or other criteria.
 
 == Installation ==
